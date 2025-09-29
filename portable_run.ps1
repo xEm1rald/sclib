@@ -1,66 +1,36 @@
-# === Portable sclib runner (Python embeddable + pip) ===
+# sclib-launcher.ps1
+$ErrorActionPreference = "Stop"
 
-$tempDir = Join-Path $env:TEMP "sclib_temp"
-$pythonDir = Join-Path $tempDir "Python"
-New-Item -ItemType Directory -Path $pythonDir -Force | Out-Null
-Write-Host "Created temp directory: $tempDir"
+# === Create Temp Directory ===
+$tempDir = Join-Path $env:TEMP ("sclib_" + [guid]::NewGuid().ToString())
+New-Item -ItemType Directory -Path $tempDir | Out-Null
+Write-Host "Temp dir: $tempDir"
 
-# Download Python embeddable
-$pythonZip = Join-Path $tempDir "python-312-embed-amd64.zip"
-$pythonUrl = "https://www.python.org/ftp/python/3.12.0/python-3.12.0-embed-amd64.zip"
-Write-Host "Downloading Python embeddable..."
-Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonZip -ErrorAction Stop
-Expand-Archive -Path $pythonZip -DestinationPath $pythonDir -Force
+# === Define URLs ===
+$pythonUrl = "https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip"
+$sclibUrl  = "https://github.com/xEm1rald/sclib/archive/refs/heads/main.zip"
 
-$pythonPath = Join-Path $pythonDir "python.exe"
-$pipPath = Join-Path $pythonDir "Scripts\pip.exe"
+# === Download Files ===
+$pythonZip = Join-Path $tempDir "python.zip"
+$sclibZip  = Join-Path $tempDir "sclib.zip"
 
-# Download get-pip.py
-$getPip = Join-Path $tempDir "get-pip.py"
-Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile $getPip -ErrorAction Stop
+Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonZip
+Invoke-WebRequest -Uri $sclibUrl -OutFile $sclibZip
 
-# Install pip
-Write-Host "Installing pip..."
-& $pythonPath $getPip
+# === Extract Archives ===
+Expand-Archive -Path $pythonZip -DestinationPath $tempDir\python
+Expand-Archive -Path $sclibZip -DestinationPath $tempDir\sclib
 
-# Upgrade pip
-& $pythonPath -m pip install --upgrade pip
+# === Paths ===
+$pythonDir = Join-Path $tempDir "python"
+$sclibDir  = Get-ChildItem -Path (Join-Path $tempDir "sclib") | Where-Object { $_.PsIsContainer } | Select-Object -First 1
+$pythonExe = Join-Path $pythonDir "python.exe"
+$mainFile  = Join-Path $sclibDir.FullName "__main__.py"
 
-# Download sclib
-$zipFile = Join-Path $tempDir "sclib-main.zip"
-$sclibUrl = "https://github.com/xEm1rald/sclib/archive/refs/heads/main.zip"
-Write-Host "Downloading sclib project..."
-Invoke-WebRequest -Uri $sclibUrl -OutFile $zipFile -ErrorAction Stop
-Expand-Archive -Path $zipFile -DestinationPath $tempDir -Force
-$sclibDir = Join-Path $tempDir "sclib-main"
-Write-Host "sclib extracted to: $sclibDir"
+# === Run __main__.py ===
+Write-Host "Running $mainFile"
+& $pythonExe $mainFile
 
-# Install requirements
-$requirementsPath = Join-Path $sclibDir "requirements.txt"
-if (Test-Path $requirementsPath) {
-    Write-Host "Installing Python requirements..."
-    & $pythonPath -m pip install -r $requirementsPath
-}
-
-# Run sclib
-$mainScript = Join-Path $sclibDir "__main__.py"
-if (Test-Path $mainScript) {
-    Write-Host "Running sclib..."
-    Start-Process -FilePath $pythonPath -ArgumentList $mainScript -Wait
-} else {
-    Write-Host "Main script not found: $mainScript"
-}
-
-# Cleanup
-Write-Host "Cleaning up temp folder..."
-Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-
-# Self-delete
-if ($PSCommandPath) {
-    Write-Host "Deleting self..."
-    Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue
-} else {
-    Write-Host "Script run via iex; cannot delete self."
-}
-
-Write-Host "Done!"
+# === Cleanup ===
+Remove-Item -Recurse -Force $tempDir
+Write-Host "Cleanup done!"
