@@ -1,36 +1,41 @@
-# sclib-launcher.ps1
-$ErrorActionPreference = "Stop"
+# Download Python 3.13.7 installer
+$pythonUrl = "https://www.python.org/ftp/python/3.13.7/python-3.13.7-amd64.exe"
+$installerPath = "$env:TEMP\python-3.13.7-amd64.exe"
+Invoke-WebRequest -Uri $pythonUrl -OutFile $installerPath
 
-# === Create Temp Directory ===
-$tempDir = Join-Path $env:TEMP ("sclib_" + [guid]::NewGuid().ToString())
-New-Item -ItemType Directory -Path $tempDir | Out-Null
-Write-Host "Temp dir: $tempDir"
+# Run the installer silently with default settings and add Python to PATH
+Start-Process -FilePath $installerPath -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1" -Wait
 
-# === Define URLs ===
-$pythonUrl = "https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip"
-$sclibUrl  = "https://github.com/xEm1rald/sclib/archive/refs/heads/main.zip"
+# Delete the installer file
+Remove-Item -Path $installerPath -Force
 
-# === Download Files ===
-$pythonZip = Join-Path $tempDir "python.zip"
-$sclibZip  = Join-Path $tempDir "sclib.zip"
+# Create temporary directory "sclib_tmp" in system's TEMP directory
+$tempDir = Join-Path $env:TEMP "sclib_tmp"
+if (Test-Path $tempDir) {
+    Remove-Item $tempDir -Recurse -Force
+}
+New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 
-Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonZip
-Invoke-WebRequest -Uri $sclibUrl -OutFile $sclibZip
+# Set working directory to temp
+Set-Location $tempDir
 
-# === Extract Archives ===
-Expand-Archive -Path $pythonZip -DestinationPath $tempDir\python
-Expand-Archive -Path $sclibZip -DestinationPath $tempDir\sclib
+# Download the ZIP file
+$zipUrl = "https://github.com/xEm1rald/sclib/archive/refs/heads/main.zip"
+$zipPath = Join-Path $tempDir "sclib-main.zip"
+Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
 
-# === Paths ===
-$pythonDir = Join-Path $tempDir "python"
-$sclibDir  = Get-ChildItem -Path (Join-Path $tempDir "sclib") | Where-Object { $_.PsIsContainer } | Select-Object -First 1
-$pythonExe = Join-Path $pythonDir "python.exe"
-$mainFile  = Join-Path $sclibDir.FullName "__main__.py"
+# Unzip the archive
+Expand-Archive -Path $zipPath -DestinationPath $tempDir -Force
 
-# === Run __main__.py ===
-Write-Host "Running $mainFile"
-& $pythonExe $mainFile
+# Change to the extracted directory
+Set-Location "$tempDir\sclib-main"
 
-# === Cleanup ===
-Remove-Item -Recurse -Force $tempDir
-Write-Host "Cleanup done!"
+# Install dependencies from requirements.txt
+pip install -r requirements.txt
+
+# Run the main script
+py __main__.py
+
+# Optional: Cleanup (uncomment if you want to delete the temp dir after execution)
+# Set-Location $PSScriptRoot
+# Remove-Item $tempDir -Recurse -Force
