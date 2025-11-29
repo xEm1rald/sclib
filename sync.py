@@ -2,15 +2,16 @@
 import urllib.request
 from urllib.error import HTTPError
 from urllib.request import urlopen
+import mutagen
+from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB, TRCK
+from mutagen.mp3 import MP3
+from ssl import SSLContext
+from concurrent import futures
 import json
 import random
 import re
-from ssl import SSLContext
-from concurrent import futures
-import mutagen
-import util
-from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB, TRCK
-from mutagen.mp3 import MP3
+
+from . import util
 
 
 SSL_VERIFY=True

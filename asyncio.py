@@ -1,5 +1,4 @@
 """ Asyncio """
-
 import sys
 import random
 import json
@@ -9,8 +8,8 @@ import asyncio
 import aiohttp
 import mutagen
 
-import util
-import sync
+from . import util
+from . import sync
 
 
 async def get_resource(url) -> bytes:
