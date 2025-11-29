@@ -206,6 +206,10 @@ class Track:
         for key in self.__slots__:
             self.__setattr__(key, obj[key] if key in obj else None)
 
+        # set as default high quality image
+        if self.artwork_url:
+            self.artwork_url = util.get_large_artwork_url(self.artwork_url)
+
         self.client = client
         self.ready = False
         self.clean_attributes()
