@@ -8,7 +8,7 @@ import re
 from ssl import SSLContext
 from concurrent import futures
 import mutagen
-from . import util
+import util
 from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB, TRCK
 from mutagen.mp3 import MP3
 
@@ -234,7 +234,7 @@ class Track:
 
             album_artwork = None
             if self.artwork_url:
-                with urlopen(util.get_large_artwork_url(self.artwork_url),context=get_ssl_setting()) as client:
+                with urlopen(util.get_large_artwork_url(self.artwork_url), context=get_ssl_setting()) as client:
                     album_artwork = client.read()
 
             out = self.write_track_id3(file, album_artwork)

@@ -9,7 +9,9 @@ import asyncio
 import aiohttp
 import mutagen
 
-from . import sync, util
+import util
+import sync
+
 
 async def get_resource(url) -> bytes:
     """ Get a resource based on url """
